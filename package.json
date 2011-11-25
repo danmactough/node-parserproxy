@@ -1,0 +1,22 @@
+{
+  "name": "parserproxy",
+  "author": "Dan MacTough <danmactough@gmail.com>",
+  "description": "A JSON-over-HTTP proxy for node-feedparser and node-opmlparser",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/danmactough/node-parserproxy.git"
+  },
+  "keywords": ["http", "proxy", "json", "rss", "feed", "atom", "rdf", "opml", "outline", "xml", "syndication"],
+  "main": "./server.js",
+  "engines": {
+    "node": ">= 0.4.0"
+  },
+  "dependencies": {
+    "feedparser": "0.4.x",
+    "opmlparser": "0.2.x",
+    "request": "2.1.x"
+  },
+  "devDependencies": {}
+}
+
