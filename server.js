@@ -22,28 +22,6 @@ if (!module.parent) {
     console.error('Caught exception: ' + err);
   });
   
-  function parseFeed (url, callback){
-    request(url, function (err, response, body){
-      if (err) callback(err);
-      else if (response.statusCode >= 400) callback(response.statusCode);
-      else {
-        var parser = new FeedParser();
-        parser.parseString(body, callback);
-      }
-    });
-  }
-  
-  function parseOpml (url, callback){
-    request(url, function (err, response, body){
-      if (err) callback(err);
-      else if (response.statusCode >= 400) callback(response.statusCode);
-      else {
-        var parser = new OpmlParser();
-        parser.parseString(body, callback);
-      }
-    });
-  }
-  
   var server = http.createServer(function (req, res) {
     var data = '';
     req.body = {};
@@ -51,38 +29,78 @@ if (!module.parent) {
     req.on('data', function (buffer){
       data += (buffer.toString('utf8'));
     });
+
     req.on('end', function (){
-      req.body = JSON.parse(data);
+
+      if (req.method != 'POST') {
+        res.statusCode = 501; // Not implemented
+        return res.end();
+      }
+
+      if (req.headers['content-type'] == 'application/json') {
+        req.body = JSON.parse(data);
+      } else if (req.headers['content-type'] == 'application/xml' || 
+                 req.headers['content-type'] == 'text/xml' || 
+                 req.headers['content-type'] == 'text/x-opml' || 
+                 req.headers['content-type'] == 'application/rss+xml') {
+        req.body = data;
+      } else {
+        res.statusCode = 501; // Not implemented
+        return res.end();
+      }
+
+      function _parse (parser, string, callback){
+        parser.parseString(string, callback);
+      }
+    
+      function _request (parser, url, callback){
+        request(url, function (err, response, body){
+          if (err) callback(err);
+          else if (response.statusCode >= 400) callback(response.statusCode);
+          else _parse(parser, body, callback);
+        });  
+      }
+
       switch (req.url) {
         case '/parseFeed':
-          parseFeed(req.body.url, function (err, meta, articles){
-            if (err) {
-              if (+err >= 400) {
-                res.statusCode = err;
-              } else {
-                res.writeHead(500, err.message || err);
-              }
-              res.end();
-            } else {
-              res.writeHead(200, {'Content-Type': 'application/json'});
-              res.end(JSON.stringify({ meta: meta, articles: articles }));
-            }
-          });
+          var parser = new FeedParser()
+            , respond = function (err, meta, articles){
+                if (err) {
+                  if (+err >= 400) {
+                    res.statusCode = err;
+                  } else {
+                    res.writeHead(500, err.message || err);
+                  }
+                  res.end();
+                } else {
+                  res.writeHead(200, {'Content-Type': 'application/json'});
+                  res.end(JSON.stringify({ meta: meta, articles: articles }));
+                }
+              };
+
+          if (typeof req.body == 'string') _parse(parser, req.body, respond);
+          else _request(parser, req.body, respond);
+
           break;
         case '/parseOpml':
-          parseOpml(req.body.url, function (err, meta, feeds, outline){
-            if (err) {
-              if (+err >= 400) {
-                res.statusCode = err;
-              } else {
-                res.writeHead(500, err.message || err);
-              }
-              res.end();
-            } else {
-              res.writeHead(200, {'Content-Type': 'application/json'});
-              res.end(JSON.stringify({ meta: meta, feeds: feeds, outline: outline }));
-            }
-          });
+          var parser = new OpmlParser()
+            , respond = function (err, meta, feeds, outline){
+                if (err) {
+                  if (+err >= 400) {
+                    res.statusCode = err;
+                  } else {
+                    res.writeHead(500, err.message || err);
+                  }
+                  res.end();
+                } else {
+                  res.writeHead(200, {'Content-Type': 'application/json'});
+                  res.end(JSON.stringify({ meta: meta, feeds: feeds, outline: outline }));
+                }
+              };
+
+          if (typeof req.body == 'string') _parse(parser, req.body, respond);
+          else _request(parser, req.body, respond);
+
           break;
         default:
           res.statusCode = 501; // Not implemented
@@ -90,6 +108,7 @@ if (!module.parent) {
           break;
       }
     });
+
     req.on('error', function (err){
       res.writeHead(500, err.message || err);
       res.end();
