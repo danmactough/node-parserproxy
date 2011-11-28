@@ -49,15 +49,33 @@ if (!module.parent) {
         return res.end();
       }
 
-      function _parse (parser, string, callback){
-        parser.parseString(string, callback);
+      function _parse (parser, string, response, callback){
+        if (typeof response == 'function') {
+          callback = response;
+          response = null;
+        }
+        if (response) {
+          parser.parseString(string, function (err, meta, articles_or_feeds, outline){
+            if (err) callback(err);
+            else {
+              meta.response = { headers: response.headers,
+                                statusCode: response.statusCode,
+                                request: { uri: response.request.uri,
+                                           redirects: response.request.redirects} };
+              if (!outline) callback(err, meta, articles_or_feeds);
+              else callback(err, meta, articles_or_feeds, outline);
+            }
+          });
+        } else {
+          parser.parseString(string, callback);
+        }
       }
     
       function _request (parser, url, callback){
         request(url, function (err, response, body){
           if (err) callback(err);
           else if (response.statusCode >= 400) callback(response.statusCode);
-          else _parse(parser, body, callback);
+          else _parse(parser, body, response, callback);
         });  
       }
 
