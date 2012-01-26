@@ -16,7 +16,8 @@ var http = require('http')
 
 if (!module.parent) {
 
-  var port = process.env['PARSER_PROXY_PORT'] || 3030;
+  var port = process.env['PARSER_PROXY_PORT'] || 3030
+    , timeout = process.env['PARSER_PROXY_TIMEOUT'] || 3000;
   
   process.on('uncaughtException', function (err) {
     console.error('Caught exception: ' + err);
@@ -38,7 +39,13 @@ if (!module.parent) {
       }
 
       if (req.headers['content-type'] == 'application/json') {
-        req.body = JSON.parse(data);
+        try {
+          req.body = JSON.parse(data);
+        } catch(e) {
+          console.error(e.message);
+          res.statusCode = 400;
+          return res.end();
+        }
       } else if (req.headers['content-type'] == 'application/xml' || 
                  req.headers['content-type'] == 'text/xml' || 
                  req.headers['content-type'] == 'text/x-opml' || 
@@ -56,14 +63,16 @@ if (!module.parent) {
         }
         if (response) {
           parser.parseString(string, function (err, meta, articles_or_feeds, outline){
-            if (err) callback(err);
-            else {
+            if (err) {
+              console.error(err.message);
+              callback(err);
+            } else {
               meta.response = { headers: response.headers,
                                 statusCode: response.statusCode,
                                 request: { uri: response.request.uri,
                                            redirects: response.request.redirects} };
-              if (!outline) callback(err, meta, articles_or_feeds);
-              else callback(err, meta, articles_or_feeds, outline);
+              if (!outline) callback(null, meta, articles_or_feeds);
+              else callback(null, meta, articles_or_feeds, outline);
             }
           });
         } else {
@@ -71,10 +80,17 @@ if (!module.parent) {
         }
       }
     
-      function _request (parser, url, callback){
-        request(url, function (err, response, body){
-          if (err) callback(err);
-          else if (response.statusCode >= 400) callback(response.statusCode);
+      function _request (parser, req, callback){
+        var url = req.url || req.uri;
+        console.log('%s - Fetching %s', new Date(), url);
+        request({ uri: url, timeout: timeout }, function (err, response, body){
+          if (err) {
+            console.error(err.message);
+            callback(err);
+          } else if (response.statusCode >= 400) {
+            console.error('HTTP Request Error: %s', response.statusCode);
+            callback(response.statusCode);
+          }
           else _parse(parser, body, response, callback);
         });  
       }
@@ -97,7 +113,11 @@ if (!module.parent) {
               };
 
           if (typeof req.body == 'string') _parse(parser, req.body, respond);
-          else _request(parser, req.body, respond);
+          else if ('url' in req.body || 'uri' in req.body) _request(parser, req.body, respond);
+          else {
+            res.statusCode = 400;
+            res.end();
+          }
 
           break;
         case '/parseOpml':
@@ -117,7 +137,11 @@ if (!module.parent) {
               };
 
           if (typeof req.body == 'string') _parse(parser, req.body, respond);
-          else _request(parser, req.body, respond);
+          else if ('url' in req.body || 'uri' in req.body) _request(parser, req.body, respond);
+          else {
+            res.statusCode = 400;
+            res.end();
+          }
 
           break;
         default:
@@ -128,6 +152,7 @@ if (!module.parent) {
     });
 
     req.on('error', function (err){
+      console.error(err.message);
       res.writeHead(500, err.message || err);
       res.end();
     });
