@@ -38,7 +38,8 @@ Manually: (A fine idea if you're not going to use in programatically in your nod
 Then in your node app:
 
     var request = require('request');
-    request({ uri : 'http://localhost:3030/parseFeed',
+    request({ method : 'POST',
+              uri : 'http://localhost:3030/parseFeed',
               body : { url: 'http://cyber.law.harvard.edu/rss/examples/rss2sample.xml' },
               json : true },
               function (err, response, body){
@@ -47,6 +48,9 @@ Then in your node app:
                   body.articles.forEach(function (article) {
                     console.log('%s - %s', article.pubDate, article.title || article.description.substring(0,50));
                   });
+                }
+                else {
+                  console.log("Either couldn't connect to parserproxy or it failed.");
                 }
               });
 
@@ -63,7 +67,8 @@ Then in your node app:
       // you are going to make one or more requests immediately upon start up.
     
       setTimeout(function(){
-        request({ uri : 'http://localhost:3030/parseFeed',
+        request({ method : 'POST',
+                  uri : 'http://localhost:3030/parseFeed',
                   body : { url: 'http://scripting.com/rss.xml' },
                   json : true },
                   function (err, response, body){
