@@ -22,7 +22,8 @@ if (!module.parent) {
   } catch(e) { };
     
   var port = process.env['PARSER_PROXY_PORT'] || config.port || 3030
-    , timeout = process.env['PARSER_PROXY_TIMEOUT'] || config.timeout || 3000;
+    , timeout = process.env['PARSER_PROXY_TIMEOUT'] || config.timeout || 3000
+    , externalUri = config.url || 'localhost:'+port;
   
   process.on('uncaughtException', function (err) {
     console.error('Caught exception: ' + err);
@@ -152,6 +153,15 @@ if (!module.parent) {
           }
 
           break;
+        case '/': // A short usage message
+          res.writeHead(200, {'Content-Type': 'text/plain'});
+          res.write('Welcome. Parserproxy has two API endpoints.\n');
+          res.write('/parseFeed and /parseOpml\n');
+          res.write('You may pass a url to fetch and parse via query string parameter or by posting a JSON object.\n');
+          res.write('Ex. http://'+externalUri+'/parseFeed?url=http://cyber.law.harvard.edu/rss/examples/rss2sample.xml\n');
+          res.write('Alternatively, you may post the contents of the feed or OPML to parse.\n');
+          res.write('See https://github.com/danmactough/node-parserproxy for more info.\n');
+          res.end();
         default:
           res.statusCode = 501; // Not implemented
           res.end();
