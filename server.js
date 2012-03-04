@@ -31,6 +31,7 @@ if (!module.parent) {
   var server = http.createServer(function (req, res) {
     var data = '';
     req.body = {};
+    req.urlObj = url.parse(req.url, true);
   
     req.on('data', function (buffer){
       data += (buffer.toString('utf8'));
@@ -38,7 +39,7 @@ if (!module.parent) {
 
     req.on('end', function (){
 
-      if (req.method != 'POST') {
+      if (req.method != 'POST' && req.method != 'GET') {
         res.statusCode = 501; // Not implemented
         return res.end();
       }
@@ -56,6 +57,8 @@ if (!module.parent) {
                  req.headers['content-type'] == 'text/x-opml' || 
                  req.headers['content-type'] == 'application/rss+xml') {
         req.body = data;
+      } else if (req.method == 'GET') {
+        req.body = req.urlObj.query;
       } else {
         res.statusCode = 501; // Not implemented
         return res.end();
@@ -100,7 +103,7 @@ if (!module.parent) {
         });  
       }
 
-      switch (req.url) {
+      switch (req.urlObj.pathname) {
         case '/parseFeed':
           var parser = new FeedParser()
             , respond = function (err, meta, articles){
