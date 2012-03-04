@@ -16,8 +16,13 @@ var http = require('http')
 
 if (!module.parent) {
 
-  var port = process.env['PARSER_PROXY_PORT'] || 3030
-    , timeout = process.env['PARSER_PROXY_TIMEOUT'] || 3000;
+  var config = {};  
+  try {
+    config = require('./config');
+  } catch(e) { };
+    
+  var port = process.env['PARSER_PROXY_PORT'] || config.port || 3030
+    , timeout = process.env['PARSER_PROXY_TIMEOUT'] || config.timeout || 3000;
   
   process.on('uncaughtException', function (err) {
     console.error('Caught exception: ' + err);
