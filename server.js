@@ -14,23 +14,19 @@ var http = require('http')
   , OpmlParser = require('opmlparser')
   ;
 
-if (!module.parent) {
+function parserproxy (options){
 
-  var config = {};
-  try {
-    config = require('./config');
-  } catch(e) { };
+  options = options || {};
 
-  var port = process.env['PARSER_PROXY_PORT'] || config.port || 3030
-    , timeout = process.env['PARSER_PROXY_TIMEOUT'] || config.timeout || 3000
-    , externalUri = config.url || 'localhost:'+port;
-
-  process.on('uncaughtException', function (err) {
-    console.error('Caught exception: ' + err);
-  });
+  var port = process.env['PARSER_PROXY_PORT'] || options.port || 3030
+    , timeout = process.env['PARSER_PROXY_TIMEOUT'] || options.timeout || 3000
+    , externalUri = options.url || 'localhost:'+port;
 
   var server = http.createServer(function (req, res) {
-    var data = '';
+    var data = ''
+      , parser
+      , respond
+      ;
     req.body = {};
     req.urlObj = url.parse(req.url, true);
 
@@ -65,13 +61,13 @@ if (!module.parent) {
         return res.end();
       }
 
-      function _parse (parser, string, response, callback){
+      function _parse (_parser, string, response, callback){
         if (typeof response == 'function') {
           callback = response;
           response = null;
         }
         if (response) {
-          parser.parseString(string, function (err, meta, articles_or_feeds, outline){
+          _parser.parseString(string, function (err, meta, articles_or_feeds, outline){
             if (err) {
               console.error(err.message);
               callback(err);
@@ -85,11 +81,11 @@ if (!module.parent) {
             }
           });
         } else {
-          parser.parseString(string, callback);
+          _parser.parseString(string, callback);
         }
       }
 
-      function _request (parser, req, callback){
+      function _request (_parser, req, callback){
         var url = req.url || req.uri;
         console.log('%s - Fetching %s', new Date(), url);
         request({ uri: url, timeout: timeout }, function (err, response, body){
@@ -100,26 +96,26 @@ if (!module.parent) {
             console.error('HTTP Request Error: %s', response.statusCode);
             callback(response.statusCode);
           }
-          else _parse(parser, body, response, callback);
+          else _parse(_parser, body, response, callback);
         });
       }
 
       switch (req.urlObj.pathname) {
         case '/parseFeed':
-          var parser = new FeedParser()
-            , respond = function (err, meta, articles){
-                if (err) {
-                  if (+err >= 400) {
-                    res.statusCode = err;
-                  } else {
-                    res.writeHead(500, err.message || err);
-                  }
-                  res.end();
-                } else {
-                  res.writeHead(200, {'Content-Type': 'application/json'});
-                  res.end(JSON.stringify({ meta: meta, articles: articles }));
-                }
-              };
+          parser = new FeedParser();
+          respond = function (err, meta, articles){
+            if (err) {
+              if (+err >= 400) {
+                res.statusCode = err;
+              } else {
+                res.writeHead(500, err.message || err);
+              }
+              res.end();
+            } else {
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.end(JSON.stringify({ meta: meta, articles: articles }));
+            }
+          };
 
           if (typeof req.body == 'string') _parse(parser, req.body, respond);
           else if ('url' in req.body || 'uri' in req.body) _request(parser, req.body, respond);
@@ -130,20 +126,20 @@ if (!module.parent) {
 
           break;
         case '/parseOpml':
-          var parser = new OpmlParser()
-            , respond = function (err, meta, feeds, outline){
-                if (err) {
-                  if (+err >= 400) {
-                    res.statusCode = err;
-                  } else {
-                    res.writeHead(500, err.message || err);
-                  }
-                  res.end();
-                } else {
-                  res.writeHead(200, {'Content-Type': 'application/json'});
-                  res.end(JSON.stringify({ meta: meta, feeds: feeds, outline: outline }));
-                }
-              };
+          parser = new OpmlParser();
+          respond = function (err, meta, feeds, outline){
+            if (err) {
+              if (+err >= 400) {
+                res.statusCode = err;
+              } else {
+                res.writeHead(500, err.message || err);
+              }
+              res.end();
+            } else {
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.end(JSON.stringify({ meta: meta, feeds: feeds, outline: outline }));
+            }
+          };
 
           if (typeof req.body == 'string') _parse(parser, req.body, respond);
           else if ('url' in req.body || 'uri' in req.body) _request(parser, req.body, respond);
@@ -162,6 +158,7 @@ if (!module.parent) {
           res.write('Alternatively, you may post the contents of the feed or OPML to parse.\n');
           res.write('See https://github.com/danmactough/node-parserproxy for more info.\n');
           res.end();
+          break;
         default:
           res.statusCode = 501; // Not implemented
           res.end();
@@ -174,9 +171,25 @@ if (!module.parent) {
       res.writeHead(500, err.message || err);
       res.end();
     });
-  }).listen(port, function(){
+  });
+  server.listen(port, function(){
     console.log("Proxy parser server listening on port %d", port);
   });
+
+  return server;
+}
+
+if (!module.parent) {
+  process.on('uncaughtException', function (err) {
+    console.error('Caught exception: ' + err);
+  });
+
+  var config = {};
+  try {
+    config = require('./config');
+  } catch(e) { }
+
+  parserproxy(config);
 } else {
-  module.exports = __dirname + '/server.js';
+  module.exports = parserproxy;
 }
