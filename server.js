@@ -16,24 +16,24 @@ var http = require('http')
 
 if (!module.parent) {
 
-  var config = {};  
+  var config = {};
   try {
     config = require('./config');
   } catch(e) { };
-    
+
   var port = process.env['PARSER_PROXY_PORT'] || config.port || 3030
     , timeout = process.env['PARSER_PROXY_TIMEOUT'] || config.timeout || 3000
     , externalUri = config.url || 'localhost:'+port;
-  
+
   process.on('uncaughtException', function (err) {
     console.error('Caught exception: ' + err);
   });
-  
+
   var server = http.createServer(function (req, res) {
     var data = '';
     req.body = {};
     req.urlObj = url.parse(req.url, true);
-  
+
     req.on('data', function (buffer){
       data += (buffer.toString('utf8'));
     });
@@ -53,9 +53,9 @@ if (!module.parent) {
           res.statusCode = 400;
           return res.end();
         }
-      } else if (req.headers['content-type'] == 'application/xml' || 
-                 req.headers['content-type'] == 'text/xml' || 
-                 req.headers['content-type'] == 'text/x-opml' || 
+      } else if (req.headers['content-type'] == 'application/xml' ||
+                 req.headers['content-type'] == 'text/xml' ||
+                 req.headers['content-type'] == 'text/x-opml' ||
                  req.headers['content-type'] == 'application/rss+xml') {
         req.body = data;
       } else if (req.method == 'GET') {
@@ -88,7 +88,7 @@ if (!module.parent) {
           parser.parseString(string, callback);
         }
       }
-    
+
       function _request (parser, req, callback){
         var url = req.url || req.uri;
         console.log('%s - Fetching %s', new Date(), url);
@@ -101,7 +101,7 @@ if (!module.parent) {
             callback(response.statusCode);
           }
           else _parse(parser, body, response, callback);
-        });  
+        });
       }
 
       switch (req.urlObj.pathname) {
