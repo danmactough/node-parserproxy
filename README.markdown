@@ -1,5 +1,5 @@
-#  Parserproxy - A JSON-over-HTTP proxy for node-feedparser and node-opmlparser 
-      
+#  Parserproxy - A JSON-over-HTTP proxy for node-feedparser and node-opmlparser
+
 This module acts as a proxy that fetches an RSS/Atom/RDF or OPML url that you
 request, parses it -- using
 [node-feedparser](https://github.com/danmactough/node-feedparser) or
@@ -22,15 +22,22 @@ no longer be blocking.
 
 Via npm:
 
-    npm install parserproxy
+    $ npm install parserproxy
 
-Manually: (A fine idea if you're not going to use in programatically in your node.js program)
+Manually: (A fine idea if you're not going to use in programatically in your
+node.js program)
 
-    git clone git://github.com/danmactough/node-parserproxy.git parserproxy
+    $ git clone git://github.com/danmactough/node-parserproxy.git parserproxy
+    $ cd parserproxy
+    $ npm install
 
-## Example
+## Examples
 
 ### Manually
+
+If you want to run a parserproxy for use by several different scripts, then
+you'll want to clone the repository somewhere on your system and follow this
+example.
 
     $ cd parserproxy
     $ node server.js
@@ -54,37 +61,36 @@ Then in your node app:
                 }
               });
 
+Or on the command line:
+
+    $ curl http://localhost:3030/parseFeed?url=http://cyber.law.harvard.edu/rss/examples/rss2sample.xml
+
 ### Programatically
 
     var parserproxy = require('parserproxy')
-      , forever = require('forever')
-      , request = require('request');
-    
-    forever.start(parserproxy).on('start', function (process, data){
-    
-      // It takes a few milliseconds for the http server to spin up, so for the purposes of this 
-      // example, we wrap the request in a setTimeout(). You DON'T need to do this in your code unless
-      // you are going to make one or more requests immediately upon start up.
-    
-      setTimeout(function(){
-        request({ method : 'POST',
-                  uri : 'http://localhost:3030/parseFeed',
-                  body : { url: 'http://scripting.com/rss.xml' },
-                  json : true },
-                  function (err, response, body){
-                    if (!err && response.statusCode == 200) {
-                      console.log('%s [%s]', body.meta.title || body.meta.xmlUrl, body.meta.link);
-                      body.articles.forEach(function (article) {
-                        console.log('%s - %s', article.pubDate, article.title || article.description.substring(0,50));
-                      });
-                    }
-                  });
-      }, 1000);
-    });
+      , options = ({ port: 3333, timeout: 2000 }) // Example options (optional)
+      ;
+
+    parserproxy(options);
+
+### Using forever
+
+Perhaps you want to use parserproxy as part of a Node.js application that will
+be running as a daemon.  Follow the previous example, and drop that in a script
+named `parserproxy.js` in the root of your project directory. Then in your main
+application script, you can spawn that script as a child process, maybe using
+[forever](https://github.com/nodejitsu/forever), like so:
+
+    var forever = require('forever')
+      , parserproxy = new (forever.Monitor)(__dirname + '/parserproxy.js')
+      ;
+
+    parserproxy.start();
 
 ## To-do
 
-Obviously, a pluggable memcache-like ability would be great. Pull requests always welcome. :-)
+Obviously, a pluggable memcache-like ability would be great. Pull requests
+always welcome. :-)
 
 ## License 
 
