@@ -24,7 +24,6 @@ function parserproxy (options){
 
   var server = http.createServer(function (req, res) {
     var data = ''
-      , parser
       , respond
       ;
     req.body = {};
@@ -102,7 +101,6 @@ function parserproxy (options){
 
       switch (req.urlObj.pathname) {
         case '/parseFeed':
-          parser = new FeedParser();
           respond = function (err, meta, articles){
             if (err) {
               if (+err >= 400) {
@@ -117,8 +115,8 @@ function parserproxy (options){
             }
           };
 
-          if (typeof req.body == 'string') _parse(parser, req.body, respond);
-          else if ('url' in req.body || 'uri' in req.body) _request(parser, req.body, respond);
+          if (typeof req.body == 'string') _parse(FeedParser, req.body, respond);
+          else if ('url' in req.body || 'uri' in req.body) _request(FeedParser, req.body, respond);
           else {
             res.statusCode = 400;
             res.end();
@@ -126,7 +124,6 @@ function parserproxy (options){
 
           break;
         case '/parseOpml':
-          parser = new OpmlParser();
           respond = function (err, meta, feeds, outline){
             if (err) {
               if (+err >= 400) {
@@ -141,8 +138,8 @@ function parserproxy (options){
             }
           };
 
-          if (typeof req.body == 'string') _parse(parser, req.body, respond);
-          else if ('url' in req.body || 'uri' in req.body) _request(parser, req.body, respond);
+          if (typeof req.body == 'string') _parse(new OpmlParser(), req.body, respond);
+          else if ('url' in req.body || 'uri' in req.body) _request(new OpmlParser(), req.body, respond);
           else {
             res.statusCode = 400;
             res.end();
