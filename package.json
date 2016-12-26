@@ -13,9 +13,9 @@
     "node": ">= 0.4.0"
   },
   "dependencies": {
-    "feedparser": "0.10.x",
-    "opmlparser": "0.4.x",
-    "request": "2.9.x"
+    "feedparser": "~1.1.5",
+    "opmlparser": "~0.8.0",
+    "request": "~2.79.0"
   },
   "devDependencies": {}
 }
