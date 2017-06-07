@@ -1,5 +1,7 @@
 #  Parserproxy - A JSON-over-HTTP proxy for node-feedparser and node-opmlparser
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/danmactough/node-parserproxy.svg)](https://greenkeeper.io/)
+
 This module acts as a proxy that fetches an RSS/Atom/RDF or OPML url that you
 request, parses it -- using
 [node-feedparser](https://github.com/danmactough/node-feedparser) or
